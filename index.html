@@ -495,11 +495,47 @@
   border-radius: 8px;
 }
 
+.card.card-back {
+  height: 130px;
+  box-sizing: border-box;
+  background: linear-gradient(#222, #444);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 10px;
+}
+
 .card .close {
   position: absolute;
   top: 6px;
   right: 8px;
   cursor: pointer;
+}
+
+.card > .close,
+.card > .reveal,
+.card > .trade {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.card:hover > .close,
+.card:hover > .reveal,
+.card:hover > .trade {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (hover: none) {
+  .card > .close,
+  .card > .reveal,
+  .card > .trade {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 #hand {
@@ -540,7 +576,8 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
 import {
-  getDatabase, ref, set, onValue, push, remove, onDisconnect, serverTimestamp
+  getDatabase, ref, set, onValue, push, remove, onDisconnect, serverTimestamp,
+  runTransaction, update
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
 
@@ -566,6 +603,8 @@ let activeCardRef;
 let deckNameRef;
 let baseDeckRef;
 let handsRef;
+let deckLoadRef;
+let tradeOffersRef;
 
 // ─── ROOM ID from URL hash ───────────────────
 function getRoomId() {
@@ -602,6 +641,13 @@ let discardPile = [];
 let activeCard = null;
 let playerHand = []
 let allHands = {};
+let deckHasSpecialCards = true;
+let revealedCards = {};
+let localRevealedDragging = null;
+let tradeOfferCards = {};
+let tradeOffers = {};
+let deckLoadSubscriptionReady = false;
+let lastDeckLoadMarker = null;
 
 // ─── Share URL ───────────────────────────────
 shareUrl.textContent = location.href;
@@ -781,16 +827,88 @@ function startFirebase() {
   activeCardRef = ref(db, `rooms/${ROOM_ID}/activeCard`);
   baseDeckRef = ref(db, `rooms/${ROOM_ID}/baseDeck`);
   handsRef = ref(db, `rooms/${ROOM_ID}/hands`);
+  deckLoadRef = ref(db, `rooms/${ROOM_ID}/deckLoadMarker`);
+  tradeOffersRef = ref(db, `rooms/${ROOM_ID}/tradeOffers`);
+  onDisconnect(ref(db, `rooms/${ROOM_ID}/hands/${PLAYER_ID}`)).remove();
+  onDisconnect(ref(db, `rooms/${ROOM_ID}/tradeOffers/${PLAYER_ID}`)).remove();
 
+onValue(deckLoadRef, snap => {
+  const marker = snap.val();
+  if (!deckLoadSubscriptionReady) {
+    deckLoadSubscriptionReady = true;
+    lastDeckLoadMarker = marker;
+    return;
+  }
+
+  if (marker === lastDeckLoadMarker) return;
+  lastDeckLoadMarker = marker;
+  document.querySelectorAll('.card').forEach(card => card.remove());
+  activeCard = null;
+  revealedCards = {};
+  localRevealedDragging = null;
+  tradeOfferCards = {};
+  tradeOffers = {};
+});
 
 onValue(revealedRef, snap => {
-  const data = snap.val() || {};
+  const remote = snap.val() || {};
 
-  // remove existing revealed cards
-  document.querySelectorAll('.revealed-card').forEach(c => c.remove());
+  Object.keys(revealedCards).forEach(key => {
+    if (!remote[key]) {
+      revealedCards[key].el.remove();
+      delete revealedCards[key];
+    }
+  });
 
-  Object.entries(data).forEach(([key, cardData]) => {
-    showRevealedCard(cardData, key);
+  Object.entries(remote).forEach(([key, cardData]) => {
+    syncRevealedCard(cardData, key);
+  });
+});
+
+onValue(tradeOffersRef, snap => {
+  const remote = {};
+  Object.entries(snap.val() || {}).forEach(([ownerId, offers]) => {
+    Object.entries(offers || {}).forEach(([handKey, offer]) => {
+      remote[`${ownerId}/${handKey}`] = {
+        ...offer,
+        offeredBy: ownerId,
+        handKey
+      };
+    });
+  });
+  tradeOffers = remote;
+
+  Object.keys(tradeOfferCards).forEach(key => {
+    if (!remote[key] || remote[key].offeredBy === PLAYER_ID) {
+      tradeOfferCards[key].el.remove();
+      delete tradeOfferCards[key];
+    }
+  });
+
+  Object.entries(remote).forEach(([key, offer]) => {
+    if (offer.offeredBy !== PLAYER_ID) {
+      syncTradeOffer(offer, key);
+    }
+  });
+
+  document.querySelectorAll('.hand-card').forEach(card => {
+    const isOffered = Boolean(
+      remote[`${PLAYER_ID}/${card.dataset.handKey}`]
+    );
+    card.querySelectorAll('.hand-action').forEach(action => {
+      action.disabled = isOffered;
+    });
+  });
+
+  document.querySelectorAll('.hand-source-card').forEach(card => {
+    const isOffered = Boolean(
+      remote[`${PLAYER_ID}/${card.dataset.handKey}`]
+    );
+    if (isOffered) {
+      setHandCardTradePending(card);
+    } else if (card.dataset.tradePending === 'true') {
+      card.remove();
+    }
   });
 });
 
@@ -822,6 +940,17 @@ onValue(revealedRef, snap => {
   drawPile = snap.val() || [];
 });
 
+onValue(baseDeckRef, snap => {
+  const cards = Object.values(snap.val() || {});
+  deckHasSpecialCards = cards.length === 0 || cards.some(card => card?.special === true);
+  document.getElementById('hand').style.display = deckHasSpecialCards ? '' : 'none';
+
+  if (activeCard) {
+    document.querySelectorAll('.active-card').forEach(card => card.remove());
+    showActiveCard(activeCard);
+  }
+});
+
 onValue(activeCardRef, snap => {
   const cardData = snap.val();
 
@@ -845,6 +974,16 @@ onValue(deckNameRef, snap => {
 
 onValue(handsRef, snap => {
   allHands = snap.val() || {};
+  const ownHand = allHands[PLAYER_ID] || {};
+  document.querySelectorAll('.hand-card').forEach(card => card.remove());
+  document.querySelectorAll('.hand-source-card').forEach(card => {
+    if (!ownHand[card.dataset.handKey]) {
+      card.remove();
+    }
+  });
+  Object.entries(ownHand).forEach(([key, cardData]) => {
+    addCardToHand(cardData, key);
+  });
 });
 }
 
@@ -866,10 +1005,31 @@ function updateDeckUI() {
 // initialize empty deck UI
 updateDeckUI();
 
+function cardsMatch(first, second) {
+  return first.id === second.id &&
+    first.top === second.top &&
+    first.bottom === second.bottom &&
+    first.img === second.img &&
+    first.special === second.special;
+}
+
+function getBaseCardData(cardData) {
+  return {
+    id: cardData.id,
+    top: cardData.top,
+    bottom: cardData.bottom,
+    img: cardData.img,
+    special: cardData.special
+  };
+}
+
 function spawnTestCard() {
 
   // if card already active → clear it
   if (activeCard) {
+    if (deckHasSpecialCards && activeCard.drawnBy && activeCard.drawnBy !== PLAYER_ID) {
+      return;
+    }
     set(activeCardRef, null);
     return;
   }
@@ -886,9 +1046,10 @@ if (!drawPile.length) {
 
     // rebuild deck excluding held cards
     const rebuilt = full.filter(c =>
-      !held.some(h => h.id === c.id)
+      !held.some(h => cardsMatch(h, c))
     );
 
+    shuffle(rebuilt);
     set(deckRef, rebuilt);
     showToast("Deck recycled");
   }, { onlyOnce: true });
@@ -901,7 +1062,11 @@ if (!drawPile.length) {
 
   // ✅ update global state
   set(deckRef, newDeck);
-  set(activeCardRef, cardData);
+  set(activeCardRef, {
+    ...getBaseCardData(cardData),
+    drawnBy: PLAYER_ID,
+    revealed: false
+  });
 }
 
   function showActiveCard(cardData) {
@@ -911,9 +1076,23 @@ if (!drawPile.length) {
   const card = document.createElement('div');
   card.className = 'card active-card';
 
+  const ownsActiveCard = !cardData.drawnBy || cardData.drawnBy === PLAYER_ID;
+  const isHiddenFromPlayer =
+    deckHasSpecialCards && !cardData.revealed && !ownsActiveCard;
+  const canControlActiveCard = !deckHasSpecialCards || ownsActiveCard;
+
+  if (isHiddenFromPlayer) {
+    card.classList.add('card-back');
+    card.textContent = deckName;
+    card.style.left = (window.innerWidth * 0.4) + 'px';
+    card.style.top  = (window.innerHeight * 0.3) + 'px';
+    document.body.appendChild(card);
+    return;
+  }
+
   card.innerHTML = `
-    <div class="close">✖</div>
-    <div class="reveal" style="position:absolute; top:6px; left:8px; cursor:pointer;">👁</div>
+    ${canControlActiveCard ? '<div class="close">✖</div>' : ''}
+    ${deckHasSpecialCards && canControlActiveCard && !cardData.revealed ? '<div class="reveal" style="position:absolute; top:6px; left:8px; cursor:pointer;">👁</div>' : ''}
     <div style="font-weight:bold; margin-bottom:6px;">${cardData.top}</div>
     ${cardData.img ? `<img src="${cardData.img}">` : ""}
     <div style="margin-top:6px;">${cardData.bottom}</div>
@@ -925,22 +1104,28 @@ if (!drawPile.length) {
   makeCardDraggable(card);
 
   // ✅ close = discard or hand
-  card.querySelector('.close').addEventListener('click', () => {
+  const close = card.querySelector('.close');
+  if (close) {
+    close.addEventListener('click', () => {
 
 if (cardData.special) {
 
-  push(ref(db, `rooms/${ROOM_ID}/hands/${PLAYER_ID}`), cardData);
-
-  addCardToHand(cardData);
+  push(
+    ref(db, `rooms/${ROOM_ID}/hands/${PLAYER_ID}`),
+    getBaseCardData(cardData)
+  );
 }
 
-    set(activeCardRef, null);
-  });
+      set(activeCardRef, null);
+    });
+  }
 
-  // ✅ reveal still works
-  card.querySelector('.reveal').addEventListener('click', () => {
-    revealCard(cardData);
-  });
+  const reveal = card.querySelector('.reveal');
+  if (reveal) {
+    reveal.addEventListener('click', () => {
+      set(activeCardRef, { ...cardData, revealed: true });
+    });
+  }
 
   document.body.appendChild(card);
 }
@@ -976,10 +1161,12 @@ if (cardData.special) {
 }
 
 // ✅ ✅ ADD CARD TO HAND
-function addCardToHand(cardData) {
+function addCardToHand(cardData, handKey) {
   const hand = document.getElementById('hand');
 
   const mini = document.createElement('div');
+  mini.className = 'hand-card';
+  mini.dataset.handKey = handKey;
   mini.style.background = "#fff";
   mini.style.color = "#000";
   mini.style.padding = "6px";
@@ -987,25 +1174,172 @@ function addCardToHand(cardData) {
   mini.style.borderRadius = "6px";
   mini.style.fontSize = "10px";
   mini.style.cursor = "pointer";
+  mini.style.display = "flex";
+  mini.style.alignItems = "center";
+  mini.style.gap = "6px";
 
-  mini.textContent = cardData.top;
+  const title = document.createElement('span');
+  title.textContent = cardData.top;
+  title.style.flex = "1";
+  mini.appendChild(title);
+
+  const recycle = document.createElement('button');
+  recycle.className = 'hand-action';
+  recycle.type = "button";
+  recycle.textContent = "♻️";
+  recycle.title = "Recycle card into deck";
+  recycle.setAttribute('aria-label', `Recycle ${cardData.top}`);
+  mini.appendChild(recycle);
+
+  const discard = document.createElement('button');
+  discard.className = 'hand-action';
+  discard.type = "button";
+  discard.textContent = "✖";
+  discard.title = "Discard card until the deck recycles";
+  discard.setAttribute('aria-label', `Discard ${cardData.top}`);
+  mini.appendChild(discard);
+
+  const isOffered = Boolean(tradeOffers[`${PLAYER_ID}/${handKey}`]);
+  recycle.disabled = isOffered;
+  discard.disabled = isOffered;
 
   // ✅ CLICK → reopen full card
   mini.addEventListener('click', () => {
-    spawnCardFromData(cardData);
+    spawnCardFromData(cardData, handKey);
+  });
+
+  recycle.addEventListener('click', async event => {
+    event.stopPropagation();
+    recycle.disabled = true;
+    discard.disabled = true;
+    try {
+      await recycleHandCard(cardData, handKey);
+      showToast("Card recycled");
+    } catch (error) {
+      recycle.disabled = false;
+      discard.disabled = false;
+      console.error("Failed to recycle card:", error);
+      showToast("Failed to recycle card");
+    }
+  });
+
+  discard.addEventListener('click', async event => {
+    event.stopPropagation();
+    recycle.disabled = true;
+    discard.disabled = true;
+    try {
+      await removeHandCard(cardData, handKey);
+      showToast("Card discarded");
+    } catch (error) {
+      recycle.disabled = false;
+      discard.disabled = false;
+      console.error("Failed to discard card:", error);
+      showToast("Failed to discard card");
+    }
   });
 
   hand.appendChild(mini);
 }
 
-function spawnCardFromData(cardData) {
+async function recycleHandCard(cardData, handKey) {
+  const baseCard = getBaseCardData(cardData);
+  const result = await runTransaction(deckRef, currentDeck => {
+    const deck = Object.values(currentDeck || {});
+    if (!deck.some(card => cardsMatch(card, baseCard))) {
+      deck.push(baseCard);
+    }
+    shuffle(deck);
+    return deck;
+  });
+
+  if (!result.committed) {
+    throw new Error("Deck transaction was not committed");
+  }
+
+  await removeHandCard(cardData, handKey);
+}
+
+function removeHandCard(cardData, handKey) {
+  return Promise.all([
+    remove(ref(db, `rooms/${ROOM_ID}/hands/${PLAYER_ID}/${handKey}`)),
+    remove(ref(db, `rooms/${ROOM_ID}/revealed/${PLAYER_ID}_${cardData.id}`)),
+    remove(ref(db, `rooms/${ROOM_ID}/tradeOffers/${PLAYER_ID}/${handKey}`))
+  ]);
+}
+
+function setHandCardTradePending(card) {
+  card.dataset.tradePending = 'true';
+  card.querySelector('.reveal')?.remove();
+  card.querySelector('.trade')?.remove();
+}
+
+function attachHandSourceClose(card, handKey) {
+  const close = card.querySelector('.close');
+  close.addEventListener('click', async () => {
+    if (card.dataset.tradePending !== 'true') {
+      card.remove();
+      return;
+    }
+
+    close.style.pointerEvents = 'none';
+    try {
+      const canceled = await cancelTradeOffer(PLAYER_ID, handKey);
+      if (canceled) {
+        card.remove();
+        showToast("Trade ended");
+      } else {
+        close.style.pointerEvents = '';
+        showToast("Trade is no longer available");
+      }
+    } catch (error) {
+      close.style.pointerEvents = '';
+      console.error("Failed to end trade:", error);
+      showToast("Failed to end trade");
+    }
+  });
+}
+
+function spawnPendingTradeCard(cardData, handKey, x, y) {
+  document.querySelectorAll('.hand-source-card').forEach(card => {
+    if (card.dataset.handKey === handKey) {
+      card.remove();
+    }
+  });
 
   const card = document.createElement('div');
-  card.className = 'card';
+  card.className = 'card hand-source-card';
+  card.dataset.handKey = handKey;
+  card.dataset.tradePending = 'true';
+  card.innerHTML = `
+    <div class="close">✖</div>
+    <div style="font-weight:bold; margin-bottom:6px;">${cardData.top}</div>
+    ${cardData.img ? `<img src="${cardData.img}">` : ""}
+    <div style="margin-top:6px;">${cardData.bottom}</div>
+  `;
+  card.style.left = ((x ?? 0.4) * 100) + 'vw';
+  card.style.top = ((y ?? 0.3) * 100) + 'vh';
+
+  makeCardDraggable(card);
+  attachHandSourceClose(card, handKey);
+  document.body.appendChild(card);
+}
+
+function spawnCardFromData(cardData, handKey) {
+  if (isCardRevealedByPlayer(cardData)) {
+    showToast("Card is already revealed");
+    return;
+  }
+
+  const card = document.createElement('div');
+  card.className = 'card hand-source-card';
+  card.dataset.handKey = handKey;
+  const isOffered = Boolean(tradeOffers[`${PLAYER_ID}/${handKey}`]);
+  card.dataset.tradePending = String(isOffered);
 
   card.innerHTML = `
   <div class="close">✖</div>
-  <div class="reveal" style="position:absolute; top:6px; left:8px; cursor:pointer;">👁</div>
+  ${isOffered ? '' : '<div class="reveal" style="position:absolute; top:6px; left:8px; cursor:pointer;">👁</div>'}
+  ${isOffered ? '' : '<div class="trade" style="position:absolute; top:6px; left:36px; cursor:pointer;">🤲</div>'}
   <div style="font-weight:bold; margin-bottom:6px;">${cardData.top}</div>
   ${cardData.img ? `<img src="${cardData.img}">` : ""}
   <div style="margin-top:6px;">${cardData.bottom}</div>
@@ -1016,43 +1350,408 @@ function spawnCardFromData(cardData) {
 
   makeCardDraggable(card);
 
-  card.querySelector('.reveal').addEventListener('click', () => {
-  revealCard(cardData);
-});
+  const trade = card.querySelector('.trade');
+  if (trade) {
+    trade.addEventListener('mousedown', event => event.stopPropagation());
+    trade.addEventListener('touchstart', event => event.stopPropagation());
+    trade.addEventListener('click', async () => {
+      trade.style.pointerEvents = 'none';
+      const revealControl = card.querySelector('.reveal');
+      if (revealControl) {
+        revealControl.style.visibility = 'hidden';
+      }
+      try {
+        await offerHandCard(cardData, handKey, card, false);
+        setHandCardTradePending(card);
+        showToast("Card offered for trade");
+      } catch (error) {
+        trade.style.pointerEvents = '';
+        if (revealControl) {
+          revealControl.style.visibility = '';
+        }
+        console.error("Failed to offer card:", error);
+        showToast("Failed to offer card");
+      }
+    });
+  }
 
-  card.querySelector('.close').addEventListener('click', () => {
-    card.remove();
-  });
+  const reveal = card.querySelector('.reveal');
+  if (reveal) {
+    reveal.addEventListener('click', async () => {
+      if (isCardRevealedByPlayer(cardData)) {
+        card.remove();
+        showToast("Card is already revealed");
+        return;
+      }
+
+      try {
+        const revealRequest = revealCard(cardData, handKey, card);
+        card.style.visibility = 'hidden';
+        await revealRequest;
+        reveal.remove();
+        card.remove();
+      } catch (error) {
+        card.style.visibility = '';
+        console.error("Failed to reveal card:", error);
+        showToast("Failed to reveal card");
+      }
+    });
+  }
+
+  attachHandSourceClose(card, handKey);
 
   document.body.appendChild(card);
 }
 
-function revealCard(cardData) {
-  push(revealedRef, cardData);
+function offerHandCard(cardData, handKey, card, faceUp) {
+  if (!handKey) {
+    throw new Error("Cannot trade a card without a hand key");
+  }
+
+  const rect = card.getBoundingClientRect();
+  return set(
+    ref(db, `rooms/${ROOM_ID}/tradeOffers/${PLAYER_ID}/${handKey}`),
+    {
+      ...getBaseCardData(cardData),
+      offeredBy: PLAYER_ID,
+      handKey,
+      faceUp,
+      x: rect.left / window.innerWidth,
+      y: rect.top / window.innerHeight
+    }
+  );
 }
 
-function showRevealedCard(cardData, key) {
+function offerRevealedHandCard(cardData, key, card) {
+  if (!cardData.handKey) {
+    throw new Error("Cannot trade a revealed card without a hand key");
+  }
+
+  const rect = card.getBoundingClientRect();
+  return update(ref(db, `rooms/${ROOM_ID}`), {
+    [`tradeOffers/${PLAYER_ID}/${cardData.handKey}`]: {
+      ...getBaseCardData(cardData),
+      offeredBy: PLAYER_ID,
+      handKey: cardData.handKey,
+      faceUp: true,
+      x: rect.left / window.innerWidth,
+      y: rect.top / window.innerHeight
+    },
+    [`revealed/${key}`]: null
+  });
+}
+
+function syncTradeOffer(offer, key) {
+  const existing = tradeOfferCards[key];
+  if (existing) {
+    existing.data = offer;
+    existing.accept.disabled = Boolean(offer.claimedBy);
+    existing.reject.disabled = Boolean(offer.claimedBy);
+    return;
+  }
+
+  const card = document.createElement('div');
+  card.className = `card trade-offer-card${offer.faceUp ? '' : ' card-back'}`;
+  const cardContent = offer.faceUp
+    ? `
+      <div style="font-weight:bold; margin-bottom:6px;">${offer.top}</div>
+      ${offer.img ? `<img src="${offer.img}">` : ""}
+      <div style="margin-top:6px;">${offer.bottom}</div>
+    `
+    : `<div>${deckName}</div>`;
+  card.innerHTML = `
+    <button class="trade-accept" type="button" style="position:absolute; top:6px; left:8px; cursor:pointer;" aria-label="Accept trade">🤝</button>
+    <button class="close trade-reject" type="button" aria-label="Reject trade">✖</button>
+    ${cardContent}
+  `;
+  card.style.left = ((offer.x ?? 0.4) * 100) + 'vw';
+  card.style.top = ((offer.y ?? 0.3) * 100) + 'vh';
+
+  const accept = card.querySelector('.trade-accept');
+  const reject = card.querySelector('.trade-reject');
+  accept.disabled = Boolean(offer.claimedBy);
+  reject.disabled = Boolean(offer.claimedBy);
+  accept.addEventListener('click', async () => {
+    accept.disabled = true;
+    reject.disabled = true;
+    try {
+      const accepted = await acceptTradeOffer(offer.offeredBy, offer.handKey);
+      if (!accepted) {
+        showToast("Trade is no longer available");
+      }
+    } catch (error) {
+      accept.disabled = false;
+      reject.disabled = false;
+      console.error("Failed to accept trade:", error);
+      showToast("Failed to accept trade");
+    }
+  });
+
+  reject.addEventListener('click', async () => {
+    accept.disabled = true;
+    reject.disabled = true;
+    try {
+      const rejected = await cancelTradeOffer(
+        offer.offeredBy,
+        offer.handKey
+      );
+      if (rejected) {
+        showToast("Trade rejected");
+      } else {
+        showToast("Trade is no longer available");
+      }
+    } catch (error) {
+      accept.disabled = false;
+      reject.disabled = false;
+      console.error("Failed to reject trade:", error);
+      showToast("Failed to reject trade");
+    }
+  });
+
+  tradeOfferCards[key] = { el: card, data: offer, accept, reject };
+  document.body.appendChild(card);
+}
+
+async function cancelTradeOffer(ownerId, handKey) {
+  const offerRef = ref(
+    db,
+    `rooms/${ROOM_ID}/tradeOffers/${ownerId}/${handKey}`
+  );
+  const result = await runTransaction(offerRef, currentOffer => {
+    if (!currentOffer || currentOffer.claimedBy) {
+      return;
+    }
+    return null;
+  });
+  return result.committed;
+}
+
+async function acceptTradeOffer(ownerId, handKey) {
+  const offerRef = ref(
+    db,
+    `rooms/${ROOM_ID}/tradeOffers/${ownerId}/${handKey}`
+  );
+  const claim = await runTransaction(offerRef, currentOffer => {
+    if (!currentOffer || currentOffer.claimedBy) {
+      return;
+    }
+    return { ...currentOffer, claimedBy: PLAYER_ID };
+  });
+
+  if (!claim.committed) {
+    return false;
+  }
+
+  const offer = claim.snapshot.val();
+  const receivedCardRef = push(
+    ref(db, `rooms/${ROOM_ID}/hands/${PLAYER_ID}`)
+  );
+  const roomUpdates = {
+    [`hands/${ownerId}/${handKey}`]: null,
+    [`hands/${PLAYER_ID}/${receivedCardRef.key}`]: getBaseCardData(offer),
+    [`tradeOffers/${ownerId}/${handKey}`]: null,
+    [`revealed/${ownerId}_${offer.id}`]: null
+  };
+
+  try {
+    await update(ref(db, `rooms/${ROOM_ID}`), roomUpdates);
+    showToast("Trade accepted");
+    return true;
+  } catch (error) {
+    try {
+      await runTransaction(offerRef, currentOffer => {
+        if (!currentOffer || currentOffer.claimedBy !== PLAYER_ID) {
+          return currentOffer;
+        }
+        const restoredOffer = { ...currentOffer };
+        delete restoredOffer.claimedBy;
+        return restoredOffer;
+      });
+    } catch (rollbackError) {
+      console.error("Failed to restore trade offer:", rollbackError);
+    }
+    throw error;
+  }
+}
+
+function isCardRevealedByPlayer(cardData) {
+  return Object.values(revealedCards).some(({ data }) =>
+    data.id === cardData.id && data.revealedBy === PLAYER_ID
+  );
+}
+
+function revealCard(cardData, handKey, card) {
+  if (!Number.isInteger(cardData.id)) {
+    throw new Error("Cannot reveal a card without a numeric ID");
+  }
+
+  const rect = card.getBoundingClientRect();
+  const sharedCardRef = ref(
+    db,
+    `rooms/${ROOM_ID}/revealed/${PLAYER_ID}_${cardData.id}`
+  );
+
+  return set(sharedCardRef, {
+    ...cardData,
+    revealedBy: PLAYER_ID,
+    handKey,
+    x: rect.left / window.innerWidth,
+    y: rect.top / window.innerHeight
+  });
+}
+
+function syncRevealedCard(cardData, key) {
+  const existing = revealedCards[key];
+  if (existing) {
+    existing.data = cardData;
+    if (key !== localRevealedDragging) {
+      existing.el.style.left = ((cardData.x ?? 0.3) * 100) + 'vw';
+      existing.el.style.top = ((cardData.y ?? 0.2) * 100) + 'vh';
+    }
+    return;
+  }
+
   const card = document.createElement('div');
   card.className = 'card revealed-card';
   card.style.transform = `rotate(${Math.random() * 6 - 3}deg)`;
-  document.querySelectorAll('.revealed-card').forEach(c => c.remove());
+  const isOwner = cardData.revealedBy === PLAYER_ID;
   
   card.innerHTML = `
-    <div class="close" style="top:4px; right:6px;">✖</div>
+    ${isOwner ? '<div class="close" style="top:4px; right:6px;">✖</div>' : ''}
+    ${isOwner && cardData.handKey ? '<div class="trade" style="position:absolute; top:6px; left:8px; cursor:pointer;">🤲</div>' : ''}
     <div style="font-weight:bold; margin-bottom:6px;">${cardData.top}</div>
     ${cardData.img ? `<img src="${cardData.img}">` : ""}
     <div style="margin-top:6px;">${cardData.bottom}</div>
   `;
 
-  card.style.left = (window.innerWidth * (0.3 + Math.random() * 0.4)) + 'px';
-  card.style.top  = (window.innerHeight * (0.2 + Math.random() * 0.3)) + 'px';
+  card.style.left = ((cardData.x ?? 0.3) * 100) + 'vw';
+  card.style.top = ((cardData.y ?? 0.2) * 100) + 'vh';
 
-  // ✅ REMOVE FROM DB
-  card.querySelector('.close').addEventListener('click', () => {
-    remove(ref(db, `rooms/${ROOM_ID}/revealed/${key}`));
+  const close = card.querySelector('.close');
+  if (close) {
+    close.addEventListener('mousedown', event => event.stopPropagation());
+    close.addEventListener('touchstart', event => event.stopPropagation());
+    close.addEventListener('click', () => {
+      remove(ref(db, `rooms/${ROOM_ID}/revealed/${key}`));
+    });
+  }
+
+  const trade = card.querySelector('.trade');
+  if (trade) {
+    trade.addEventListener('mousedown', event => event.stopPropagation());
+    trade.addEventListener('touchstart', event => event.stopPropagation());
+    trade.addEventListener('click', async () => {
+      trade.style.pointerEvents = 'none';
+      try {
+        await offerRevealedHandCard(cardData, key, card);
+        if (tradeOffers[`${PLAYER_ID}/${cardData.handKey}`]) {
+          spawnPendingTradeCard(
+            cardData,
+            cardData.handKey,
+            cardData.x,
+            cardData.y
+          );
+          showToast("Card offered for trade");
+        }
+      } catch (error) {
+        trade.style.pointerEvents = '';
+        console.error("Failed to offer card:", error);
+        showToast("Failed to offer card");
+      }
+    });
+  }
+
+  revealedCards[key] = { el: card, data: cardData };
+  makeRevealedCardDraggable(card, key);
+  document.body.appendChild(card);
+}
+
+function makeRevealedCardDraggable(card, key) {
+  let dragging = false;
+  let startX, startY, startLeft, startTop;
+
+  function clamp(value) {
+    return Math.max(0, Math.min(1, value));
+  }
+
+  function startDrag(clientX, clientY) {
+    dragging = true;
+    localRevealedDragging = key;
+    startX = clientX;
+    startY = clientY;
+    startLeft = card.offsetLeft / window.innerWidth;
+    startTop = card.offsetTop / window.innerHeight;
+    card.style.zIndex = 600;
+  }
+
+  function getPosition(clientX, clientY) {
+    return {
+      x: clamp(startLeft + (clientX - startX) / window.innerWidth),
+      y: clamp(startTop + (clientY - startY) / window.innerHeight)
+    };
+  }
+
+  function moveDrag(clientX, clientY) {
+    if (!dragging) return;
+    const position = getPosition(clientX, clientY);
+    card.style.left = (position.x * 100) + 'vw';
+    card.style.top = (position.y * 100) + 'vh';
+
+    if (!moveDrag.timer) {
+      moveDrag.timer = setTimeout(() => {
+        moveDrag.timer = null;
+        set(ref(db, `rooms/${ROOM_ID}/revealed/${key}`), {
+          ...revealedCards[key].data,
+          ...position
+        });
+      }, 40);
+    }
+  }
+
+  function endDrag(clientX, clientY) {
+    if (!dragging) return;
+    dragging = false;
+    localRevealedDragging = null;
+    card.style.zIndex = '';
+    clearTimeout(moveDrag.timer);
+    moveDrag.timer = null;
+    const position = getPosition(clientX, clientY);
+    set(ref(db, `rooms/${ROOM_ID}/revealed/${key}`), {
+      ...revealedCards[key].data,
+      ...position
+    });
+  }
+
+  card.addEventListener('mousedown', event => {
+    event.preventDefault();
+    startDrag(event.clientX, event.clientY);
+    const move = moveEvent => moveDrag(moveEvent.clientX, moveEvent.clientY);
+    const up = upEvent => {
+      endDrag(upEvent.clientX, upEvent.clientY);
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
   });
 
-  document.body.appendChild(card);
+  card.addEventListener('touchstart', event => {
+    event.preventDefault();
+    const touch = event.touches[0];
+    startDrag(touch.clientX, touch.clientY);
+  }, { passive: false });
+
+  card.addEventListener('touchmove', event => {
+    event.preventDefault();
+    const touch = event.touches[0];
+    moveDrag(touch.clientX, touch.clientY);
+  }, { passive: false });
+
+  card.addEventListener('touchend', event => {
+    event.preventDefault();
+    const touch = event.changedTouches[0];
+    endDrag(touch.clientX, touch.clientY);
+  }, { passive: false });
 }
   
     // ── DICE (MULTI, SYNCED) ────────────────────
@@ -1171,10 +1870,11 @@ shuffle(newDeck);
 
 set(deckRef, newDeck);
 set(baseDeckRef, newDeck);
-
-
-// ✅ clear active card
+set(handsRef, null);
 set(activeCardRef, null);
+set(revealedRef, null);
+set(tradeOffersRef, null);
+set(deckLoadRef, `${Date.now()}_${PLAYER_ID}`);
 
     showToast(`Loaded ${deckCards.length} cards`);
     updateDeckUI();
