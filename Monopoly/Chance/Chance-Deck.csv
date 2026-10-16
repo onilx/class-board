@@ -1,19 +1,19 @@
 CHANCE (mode:shuffle),,,
 TOP,BOTTOM,IMAGE,SPECIAL
-Advance token to the nearest railroad and pay the owner twice the rental to which he is otherwise entitled.,If railroad is UNOWNED you may buy it from the bank,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/,FALSE
-Advance token to the nearest utility. If unowned you may buy it from the bank.,"If owned, throw dice and pay the owner a total ten times the amount shown",https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/,FALSE
+Advance token to the nearest railroad and pay the owner twice the rental to which he is otherwise entitled.,If railroad is UNOWNED you may buy it from the bank,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance_advance-to-rr.png,FALSE
+Advance token to the nearest utility. If unowned you may buy it from the bank.,"If owned, throw dice and pay the owner a total ten times the amount shown",https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance_advance-to-utility.png,FALSE
 TAKE A WALK ON THE BOARD WALK,ADVANCE TOKEN TO BOARD WALK,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-advance_to_board_walk.png,FALSE
-ADVANCE TO GO,(Collect $200),https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/,FALSE
-ADVANCE TO ST. CHARELS PLACE,"IF YOU PASS GO, COLLECT $200",https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/,FALSE
-YOUR BUILDING AND LOAN MATURES,COLLECT $150,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/,FALSE
-BANK PAYS YOU,DIVIDEN OF $50,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/,FALSE
-You Haave Been ELECTED CHAIRMAN OF THE BOARD,PAY EACH PLAYER $50,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/,FALSE
-Make General Repairs On All Your Property,FOR EACH HOUSE PAY $25 FOR EACH HOTEL $100,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/,FALSE
-GO BACK,3 SPACES,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/,FALSE
-GO DIRECTLY TO JAIL,"DO NOT PASS GO, NO NOT COLLECT $200",https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/,FALSE
-THIS CARD MAY BE KEPT UNTIL NEEDED OR SOLD,GET OUT OF JAIL FREE,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/,TRUE
-TAKE A RIDE ON THE READING,"IF YOU PASS GO, COLLECT $200",https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/,FALSE
-,,,
+ADVANCE TO GO,(Collect $200),https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-advance_to_go.png,FALSE
+ADVANCE TO ST. CHARELS PLACE,"IF YOU PASS GO, COLLECT $200",https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-advance_to_stcharles.png,FALSE
+YOUR BUILDING AND LOAN MATURES,COLLECT $150,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-building_and_loan.png,FALSE
+BANK PAYS YOU,DIVIDEN OF $50,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-dividend.png,FALSE
+You Haave Been ELECTED CHAIRMAN OF THE BOARD,PAY EACH PLAYER $50,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-elected_chair.png,FALSE
+Make General Repairs On All Your Property,FOR EACH HOUSE PAY $25 FOR EACH HOTEL $100,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-general_repairs.png,FALSE
+GO BACK,3 SPACES,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-go_back_three.png,FALSE
+GO DIRECTLY TO JAIL,"DO NOT PASS GO, NO NOT COLLECT $200",https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chancechance-got_to_jail.png,FALSE
+THIS CARD MAY BE KEPT UNTIL NEEDED OR SOLD,GET OUT OF JAIL FREE,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chancechance-ride_get_out_of_jail.png,TRUE
+TAKE A RIDE ON THE READING,"IF YOU PASS GO, COLLECT $200",https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chancechance-ride_reading_rr.png,FALSE
+PAY POOR TAX,OF $15,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/chance-poor_tax.png,FALSE
 ,,,
 ,,,
 ,,,
