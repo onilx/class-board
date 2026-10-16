@@ -1,0 +1,17 @@
+Community Chest (mode:shuffle),,,
+TOP,BOTTOM,IMAGE,SPECIAL
+ADVANCE TO GO,(COLLECT $200),https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-advance_to_go.png,FALSE
+BANK ERROR IN YOUR FAVOR,COLLECT $200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-bank_error.png,FALSE
+DOCTOR'S FEE,PAY $50,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-doctors_fee.png,FALSE
+"GET OUT OF JAIL, FREE",THIS CARD CAN BE KEPT UNTIL NEEDED OR SOLD,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-get_out.png,TRUE
+GO TO JAIL,GO DIRECTLY TO JAIL. DO NOT PASS GO. DO NOT COLLECT $200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-go_to_jail.png,FALSE
+YOU INHERIT $100,,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-inherit_100.png,FALSE
+LIFE INSURANCE MATURES,COLLECT $100,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-Life_Insurance.png,FALSE
+GRAND OPERA OPENING,COLLECT $50 FROM EVERY PLAYER FOR OPENING NIGHT SEATS,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-Opera_opening.png,FALSE
+FROM SALE OF STOCK,YOU GET $45,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-sale_of_stock.png,FALSE
+PAY SCHOOL,TAX OF $150,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-school_tax.png,FALSE
+RECEIVE,FOR SERVICES $25,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-services.png,FALSE
+YOU HAVE WON SECOND PRIZE IN A BEAUTY CONTEST,COLLECT $10,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-sesond_place.png,FALSE
+YOU ARE ASSESED FOR STREET REPAIRS,$40 PER HOUSE $115 PER HOTEL,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-street_repair.png,FALSE
+INCOME TAX REFUND,COLLECT $20,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-tax_refund.png,FALSE
+XMAS FUN MATURES,COLLECT $100,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Comunity%20Chest/Community_Chest-xmas_fund.png,FALSE
