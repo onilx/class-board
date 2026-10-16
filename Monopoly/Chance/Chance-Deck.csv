@@ -4,7 +4,7 @@ Advance token to the nearest railroad and pay the owner twice the rental to whic
 Advance token to the nearest utility. If unowned you may buy it from the bank.,If owned throw dice and pay the owner a total ten times the amount shown,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance_advance-to-utility.png,FALSE
 TAKE A WALK ON THE BOARD WALK,ADVANCE TOKEN TO BOARD WALK,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-advance_to_board_walk.png,FALSE
 ADVANCE TO GO,(Collect $200),https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-advance_to_go.png,FALSE
-ADVANCE TO ST. CHARELS PLACE,IF YOU PASS GO, COLLECT $200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-advance_to_stcharles.png,FALSE
+ADVANCE TO ST. CHARELS PLACE,IF YOU PASS GO COLLECT $200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-advance_to_stcharles.png,FALSE
 YOUR BUILDING AND LOAN MATURES,COLLECT $150,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-building_and_loan.png,FALSE
 BANK PAYS YOU,DIVIDEN OF $50,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-dividend.png,FALSE
 You Haave Been ELECTED CHAIRMAN OF THE BOARD,PAY EACH PLAYER $50,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Chance/chance-elected_chair.png,FALSE
