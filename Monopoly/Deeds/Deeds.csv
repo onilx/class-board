@@ -1,30 +1,30 @@
-﻿CHANCE (mode:shuffle),,,
-TOP,BOTTOM,IMAGE,SPECIAL
-MEDITERRANEAN AVENUE,💲60,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-BALTIC AVENUE,💲60,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-READING RAILROAD,💲200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-ORIENTAL AVENUE,💲100,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-VERMONET AVENUE,💲100,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-CONNECTICUT AVENUE,💲120,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-ST. CHARLES PLACE,💲140,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-ELECTRIC COMPANY,💲150,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-STATES AVENUE,💲140,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-VIRGINIA AVENUE,💲160,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-PENNSYLVANIA RAILROAD,💲200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-S T. JAMES PLACE,💲180,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-TENNESSEE AVENUE,💲180,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-NEW YORK AVENUE,💲200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-KENTUCKY AVENUE,💲220,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-INDIANA AVENUE,💲220,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-ILLINOIS AVENU,💲240,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-B.&O. RAILROAD,💲200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-ATLANTIC AVENUE,💲260,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-VENTNOR AVENUE,💲260,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-WATER WORKS,💲150,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-MARVIN GARDENS,💲280,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-PACIFIC AVENUE,💲300,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-NORTH CAROLINA AVENUE,💲300,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-PENNSYLVANIA AVENUE,💲320,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-SHORT LINE,💲200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-PARK PLACE,💲350,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
-BOARDWALK,💲400,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/MediteraneanAveDeed.png,true
+﻿CHANCE (mode:shuffle),,,,,,,,,,,,,,,,,,,,,
+TOP,BOTTOM,IMAGE,SPECIAL,Color,Rent,With 1 House,With 2 Houses,With 3 Houses,With 4 Houses,With Hotel,Mortgage Value,Houses cost,,Hotels costs,,,If 2 R.R. are owned,If 3 R.R. are owned,If 4 R.R. are owned,If one utility is owned,If both utilitie are owned
+MEDITERRANEAN AVENUE,60,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/mediterraneanave.png,TRUE,Brown,2,10,30,90,160,250,30,50,. Each,50,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+BALTIC AVENUE,60,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/balticave.png,TRUE,Brown,4,20,60,180,320,450,30,50,. Each,50,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+READING RAILROAD,200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/readingrailroad.png,TRUE,Railroad,25,,,,,,100,,,,,,50,100,200,,
+ORIENTAL AVENUE,100,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/orientalave.png,TRUE,#80CCFF,6,30,90,270,400,550,50,50,. Each,50,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+VERMONET AVENUE,100,,TRUE,#80CCFF,6,30,90,270,400,550,50,50,. Each,50,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+CONNECTICUT AVENUE,120,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/connecticutave.png,TRUE,#80CCFF,8,40,100,300,450,600,50,50,. Each,50,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+ST. CHARLES PLACE,140,,TRUE,Pink,10,50,150,450,625,750,70,100,. Each,100,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+ELECTRIC COMPANY,150,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/electriccompany.png,TRUE,Utility,,,,,,,75,,,,,,,,,rent is 4 times amount shown on dice.,rent is 10 times amount shown on dice.
+STATES AVENUE,140,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/statesave.png,TRUE,Pink,10,50,150,450,625,750,70,100,. Each,100,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+VIRGINIA AVENUE,160,,TRUE,Pink,12,60,180,500,700,900,80,100,. Each,100,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+PENNSYLVANIA RAILROAD,200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/pennsylvaniarr.png,TRUE,Railroad,25,,,,,,100,,,,,,50,100,200,,
+S T. JAMES PLACE,180,,TRUE,Orange,14,70,200,550,750,950,90,100,. Each,100,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+TENNESSEE AVENUE,180,,TRUE,Orange,14,70,200,550,750,950,90,100,. Each,100,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+NEW YORK AVENUE,200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/newyorkave.png,TRUE,Orange,,,,,,,,,,,,,,,,,
+KENTUCKY AVENUE,220,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/kentuckyave.png,TRUE,Red,18,90,250,700,875,1050,110,150,. Each,150,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+INDIANA AVENUE,220,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/indianaave.png,TRUE,Red,18,90,250,700,875,1050,110,150,. Each,150,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+ILLINOIS AVENU,240,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/illinoisave.png,TRUE,Red,20,100,300,750,925,1100,120,150,. Each,150,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+B.&O. RAILROAD,200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/bandorailroad.png,TRUE,Railroad,25,,,,,,100,,,,,,50,100,200,,
+ATLANTIC AVENUE,260,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/atlanticave.png,TRUE,Yellow,22,110,330,800,975,1150,130,150,. Each,150,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+VENTNOR AVENUE,260,,TRUE,Yellow,22,110,330,800,975,1150,130,150,. Each,150,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+WATER WORKS,150,,TRUE,Utility,,,,,,,75,,,,,,,,,rent is 4 times amount shown on dice.,rent is 10 times amount shown on dice.
+MARVIN GARDENS,280,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/marvingardens.png,TRUE,Yellow,24,120,360,850,1025,1200,140,150,. Each,150,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
+PACIFIC AVENUE,300,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/pacificave.png,TRUE,,,,,,,,,,,,,,,,,,
+NORTH CAROLINA AVENUE,300,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/nocarolinaave.png,TRUE,,,,,,,,,,,,,,,,,,
+PENNSYLVANIA AVENUE,320,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/pennsylvaniaave.png,TRUE,,,,,,,,,,,,,,,,,,
+SHORT LINE,200,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/shortlinerr.png,TRUE,Railroad,25,,,,,,100,,,,,,50,100,200,,
+PARK PLACE,350,http://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/parkplace.png,TRUE,,,,,,,,,,,,,,,,,,
+BOARDWALK,400,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/boardwalk.png,TRUE,,,,,,,,,,,,,,,,,,
