@@ -1,4 +1,4 @@
-CHANCE (mode:shuffle),,,,,,,,,,,,,,,,,,,,,
+DEEDS (mode:shuffle),,,,,,,,,,,,,,,,,,,,,
 TOP,BOTTOM,IMAGE,SPECIAL,Color,Rent,With 1 House,With 2 Houses,With 3 Houses,With 4 Houses,With Hotel,Mortgage Value,Houses cost,,Hotels costs,,,If 2 R.R. are owned,If 3 R.R. are owned,If 4 R.R. are owned,If one utility is owned,If both utilitie are owned
 MEDITERRANEAN AVENUE,60,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/mediterraneanave.png,TRUE,Brown,2,10,30,90,160,250,30,50,. Each,50,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
 BALTIC AVENUE,60,https://raw.githubusercontent.com/onilx/class-board/refs/heads/main/Monopoly/Deeds/balticave.png,TRUE,Brown,4,20,60,180,320,450,30,50,. Each,50,. Each Plus 4 houses,If a player owns ALL the lots of any Color-Group then the rent is Doubled on Unimproved Lots in that group.,,,,,
