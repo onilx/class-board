@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>52 Card Pack</title>
+
+<style>
+    body {
+        margin: 20px;
+        font-family: Arial, sans-serif;
+    }
+
+    #cardList {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: fit-content;
+    }
+
+    .card {
+        background-image: url("52-card-pack.png");
+        background-repeat: no-repeat;
+        border: 1px solid #ccc;
+    }
+</style>
+</head>
+<body>
+
+<h2>Playing Cards</h2>
+
+<div id="cardList"></div>
+
+<script>
+const COLS = 13;
+const ROWS = 4;
+
+// Load image so we can calculate card size automatically
+const img = new Image();
+
+img.onload = () => {
+    const cardWidth = img.width / COLS;
+    const cardHeight = img.height / ROWS;
+
+    const container = document.getElementById("cardList");
+
+    for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+
+            const card = document.createElement("div");
+
+            card.className = "card";
+            card.style.width = `${cardWidth}px`;
+            card.style.height = `${cardHeight}px`;
+
+            card.style.backgroundSize =
+                `${img.width}px ${img.height}px`;
+
+            card.style.backgroundPosition =
+                `${-col * cardWidth}px ${-row * cardHeight}px`;
+
+            container.appendChild(card);
+        }
+    }
+};
+
+img.src = "52-card-pack.png";
+</script>
+
+</body>
+</html>
