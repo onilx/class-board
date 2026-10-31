@@ -219,6 +219,7 @@
     gap: 14px;
     transform: translateX(100%);
     transition: transform 0.3s ease;
+    overflow-y: auto;
   }
   #panel.open { transform: translateX(0); }
 
@@ -495,6 +496,69 @@
   border-radius: 8px;
 }
 
+.sprite-card-image {
+  width: 100%;
+  background-repeat: no-repeat;
+  border-radius: 8px;
+}
+
+.spread-grid {
+  position: absolute;
+  inset: 32px 0 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(var(--spread-columns), calc(200px * var(--spread-scale)));
+  grid-template-rows: repeat(var(--spread-rows), calc(340px * var(--spread-scale)));
+  align-content: safe center;
+  justify-content: center;
+}
+
+.spread-slot {
+  position: relative;
+  width: calc(200px * var(--spread-scale));
+  height: calc(340px * var(--spread-scale));
+}
+
+.card.spread-card {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 200px;
+  height: 340px;
+  overflow: hidden;
+  cursor: default;
+  transform: translateX(-50%) scale(var(--spread-scale));
+  transform-origin: top center;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.card.spread-card img {
+  height: 270px;
+  object-fit: contain;
+}
+
+.card.spread-card:hover {
+  z-index: 600;
+  transform: translateX(-50%) scale(1);
+  box-shadow: 0 16px 50px rgba(0,0,0,0.75);
+}
+
+.card.spread-card-middle {
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--spread-scale));
+  transform-origin: center;
+}
+
+.card.spread-card-middle:hover {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.card.spread-card-bottom {
+  top: auto;
+  bottom: 0;
+  transform-origin: bottom center;
+}
+
 .card.card-back {
   height: 130px;
   box-sizing: border-box;
@@ -516,15 +580,18 @@
 
 .card > .close,
 .card > .reveal,
-.card > .trade {
+.card > .trade,
+.card > .spread-take {
   opacity: 0;
   pointer-events: none;
+  z-index: 1;
   transition: opacity 120ms ease;
 }
 
 .card:hover > .close,
 .card:hover > .reveal,
-.card:hover > .trade {
+.card:hover > .trade,
+.card:hover > .spread-take {
   opacity: 1;
   pointer-events: auto;
 }
@@ -532,7 +599,8 @@
 @media (hover: none) {
   .card > .close,
   .card > .reveal,
-  .card > .trade {
+  .card > .trade,
+  .card > .spread-take {
     opacity: 1;
     pointer-events: auto;
   }
@@ -577,7 +645,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
 import {
   getDatabase, ref, set, onValue, push, remove, onDisconnect, serverTimestamp,
-  runTransaction, update
+  get, runTransaction, update
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
 
@@ -601,6 +669,9 @@ let revealedRef;
 let deckRef;
 let activeCardRef;
 let deckNameRef;
+let deckModeRef;
+let spreadOpenRef;
+let spreadDiscardedRef;
 let baseDeckRef;
 let handsRef;
 let deckLoadRef;
@@ -636,6 +707,9 @@ let isPanelOpen   = false;
 let localDragging = null;  // id being dragged locally
 let deckCards = [];
 let deckName = "Deck";
+let deckMode = "shuffle";
+let baseDeckCards = [];
+let spreadOpen = false;
 let drawPile = [];
 let discardPile = [];
 let activeCard = null;
@@ -820,11 +894,15 @@ function addPiece() {
 
 // ─── Subscribe to Firebase ───────────────────
 function startFirebase() {
+  roomRef = ref(db, `rooms/${ROOM_ID}`);
   piecesRef = ref(db, `rooms/${ROOM_ID}/pieces`);
   presenceRef = ref(db, `rooms/${ROOM_ID}/presence`);
   revealedRef = ref(db, `rooms/${ROOM_ID}/revealed`);
   deckRef = ref(db, `rooms/${ROOM_ID}/deck`);
   activeCardRef = ref(db, `rooms/${ROOM_ID}/activeCard`);
+  deckModeRef = ref(db, `rooms/${ROOM_ID}/deckMode`);
+  spreadOpenRef = ref(db, `rooms/${ROOM_ID}/spreadOpen`);
+  spreadDiscardedRef = ref(db, `rooms/${ROOM_ID}/spreadDiscarded`);
   baseDeckRef = ref(db, `rooms/${ROOM_ID}/baseDeck`);
   handsRef = ref(db, `rooms/${ROOM_ID}/hands`);
   deckLoadRef = ref(db, `rooms/${ROOM_ID}/deckLoadMarker`);
@@ -848,6 +926,7 @@ onValue(deckLoadRef, snap => {
   localRevealedDragging = null;
   tradeOfferCards = {};
   tradeOffers = {};
+  clearSpread();
 });
 
 onValue(revealedRef, snap => {
@@ -938,12 +1017,16 @@ onValue(tradeOffersRef, snap => {
 
   onValue(deckRef, snap => {
   drawPile = snap.val() || [];
+  updateSpreadPresentation();
 });
 
 onValue(baseDeckRef, snap => {
-  const cards = Object.values(snap.val() || {});
-  deckHasSpecialCards = cards.length === 0 || cards.some(card => card?.special === true);
-  document.getElementById('hand').style.display = deckHasSpecialCards ? '' : 'none';
+  baseDeckCards = Object.values(snap.val() || {});
+  deckHasSpecialCards =
+    baseDeckCards.length === 0 ||
+    baseDeckCards.some(card => card?.special === true);
+  updateHandVisibility();
+  updateSpreadPresentation();
 
   if (activeCard) {
     document.querySelectorAll('.active-card').forEach(card => card.remove());
@@ -971,9 +1054,21 @@ onValue(deckNameRef, snap => {
   updateDeckUI();
 });
 
+onValue(deckModeRef, snap => {
+  deckMode = snap.val() || "shuffle";
+  updateHandVisibility();
+  updateSpreadPresentation();
+});
+
+onValue(spreadOpenRef, snap => {
+  spreadOpen = snap.val() === true;
+  updateSpreadPresentation();
+});
+
 
 onValue(handsRef, snap => {
   allHands = snap.val() || {};
+  updateSpreadPresentation();
   const ownHand = allHands[PLAYER_ID] || {};
   document.querySelectorAll('.hand-card').forEach(card => card.remove());
   document.querySelectorAll('.hand-source-card').forEach(card => {
@@ -1005,12 +1100,123 @@ function updateDeckUI() {
 // initialize empty deck UI
 updateDeckUI();
 
+function updateHandVisibility() {
+  document.getElementById('hand').style.display =
+    deckMode === "spread" || deckHasSpecialCards ? '' : 'none';
+}
+
+function clearSpread() {
+  document.querySelector('.spread-grid')?.remove();
+}
+
+function getSpreadLayout(cardCount) {
+  if (cardCount <= 44) {
+    return { rows: 4, columns: 11, scale: 0.5 };
+  }
+  if (cardCount <= 60) {
+    return { rows: 5, columns: 12, scale: 1 / 3 };
+  }
+  if (cardCount <= 119) {
+    return { rows: 7, columns: 17, scale: 0.25 };
+  }
+  return null;
+}
+
+function getCardImageMarkup(cardData) {
+  if (!cardData.img) return "";
+  if (!cardData.sprite) {
+    return `<img src="${cardData.img}">`;
+  }
+
+  const sprite = cardData.sprite;
+  const x = sprite.columns === 1
+    ? 0
+    : (sprite.column / (sprite.columns - 1)) * 100;
+  const y = sprite.rows === 1
+    ? 0
+    : (sprite.row / (sprite.rows - 1)) * 100;
+  const cardWidth = sprite.sheetWidth / sprite.columns;
+  const cardHeight = sprite.sheetHeight / sprite.rows;
+  return `
+    <div class="sprite-card-image" style="
+      aspect-ratio:${cardWidth} / ${cardHeight};
+      background-image:url('${cardData.img}');
+      background-size:${sprite.columns * 100}% ${sprite.rows * 100}%;
+      background-position:${x}% ${y}%;
+    "></div>
+  `;
+}
+
+function updateSpreadPresentation() {
+  clearSpread();
+  if (!spreadOpen || deckMode !== "spread") return;
+
+  const layout = getSpreadLayout(baseDeckCards.length);
+  if (!layout) {
+    showToast("Spread mode supports no more than 119 cards", 4000);
+    return;
+  }
+
+  const spread = document.createElement('div');
+  spread.className = 'spread-grid';
+  spread.style.setProperty('--spread-columns', layout.columns);
+  spread.style.setProperty('--spread-rows', layout.rows);
+  spread.style.setProperty('--spread-scale', layout.scale);
+
+  [...drawPile]
+    .sort((first, second) => first.id - second.id)
+    .forEach((cardData, index) => {
+      const slot = document.createElement('div');
+      slot.className = 'spread-slot';
+
+      const card = document.createElement('div');
+      card.className = 'card spread-card';
+      const row = Math.floor(index / layout.columns);
+      const lastRow = Math.ceil(drawPile.length / layout.columns) - 1;
+      if (row === lastRow && row > 0) {
+        card.classList.add('spread-card-bottom');
+      } else if (row > 0) {
+        card.classList.add('spread-card-middle');
+      }
+      card.innerHTML = `
+        <button class="spread-take" type="button" style="position:absolute; top:6px; right:8px; cursor:pointer;" aria-label="Add ${cardData.top} to your hand" title="Add to Your Hand">✋</button>
+        <div style="font-weight:bold; margin-bottom:6px;">${cardData.top}</div>
+        ${getCardImageMarkup(cardData)}
+        <div style="margin-top:6px;">${cardData.bottom}</div>
+      `;
+
+      const take = card.querySelector('.spread-take');
+      take.addEventListener('click', async event => {
+        event.stopPropagation();
+        take.disabled = true;
+        try {
+          const claimed = await claimSpreadCard(cardData);
+          if (claimed) {
+            showToast("Card added to Your Hand");
+          } else {
+            showToast("Card is no longer available");
+          }
+        } catch (error) {
+          take.disabled = false;
+          console.error("Failed to add spread card to hand:", error);
+          showToast("Failed to add card to Your Hand");
+        }
+      });
+
+      slot.appendChild(card);
+      spread.appendChild(slot);
+    });
+
+  document.getElementById('board-wrap').appendChild(spread);
+}
+
 function cardsMatch(first, second) {
   return first.id === second.id &&
     first.top === second.top &&
     first.bottom === second.bottom &&
     first.img === second.img &&
-    first.special === second.special;
+    first.special === second.special &&
+    JSON.stringify(first.sprite || null) === JSON.stringify(second.sprite || null);
 }
 
 function getBaseCardData(cardData) {
@@ -1019,11 +1225,81 @@ function getBaseCardData(cardData) {
     top: cardData.top,
     bottom: cardData.bottom,
     img: cardData.img,
-    special: cardData.special
+    special: cardData.special,
+    ...(cardData.sprite ? { sprite: cardData.sprite } : {})
   };
 }
 
-function spawnTestCard() {
+async function claimSpreadCard(cardData) {
+  const handCardRef = push(
+    ref(db, `rooms/${ROOM_ID}/hands/${PLAYER_ID}`)
+  );
+  const initialRoom = (await get(roomRef)).val();
+  const result = await runTransaction(roomRef, room => {
+    const currentRoom = room || initialRoom;
+    if (!currentRoom) return;
+
+    const deck = Object.values(currentRoom.deck || {});
+    const cardIndex = deck.findIndex(card => cardsMatch(card, cardData));
+    if (cardIndex === -1) return;
+
+    deck.splice(cardIndex, 1);
+    return {
+      ...currentRoom,
+      deck,
+      hands: {
+        ...(currentRoom.hands || {}),
+        [PLAYER_ID]: {
+          ...(currentRoom.hands?.[PLAYER_ID] || {}),
+          [handCardRef.key]: getBaseCardData(cardData)
+        }
+      }
+    };
+  });
+
+  return result.committed;
+}
+
+async function openSpreadDeck() {
+  const room = (await get(roomRef)).val() || {};
+  const deck = Object.values(room.deck || {});
+  const held = Object.values(room.hands || {})
+    .flatMap(hand => Object.values(hand || {}));
+  Object.values(room.spreadDiscarded || {}).forEach(card => {
+    if (
+      !deck.some(deckCard => cardsMatch(deckCard, card)) &&
+      !held.some(heldCard => cardsMatch(heldCard, card))
+    ) {
+      deck.push(card);
+    }
+  });
+
+  await update(roomRef, {
+    deck: arrangeDeck(deck),
+    spreadDiscarded: null,
+    spreadOpen: true
+  });
+}
+
+async function spawnTestCard() {
+
+  if (deckMode === "spread") {
+    if (spreadOpen) {
+      await set(spreadOpenRef, false);
+      return;
+    }
+    if (!getSpreadLayout(baseDeckCards.length)) {
+      showToast("Spread mode supports no more than 119 cards", 4000);
+      return;
+    }
+    try {
+      await openSpreadDeck();
+    } catch (error) {
+      console.error("Failed to open spread deck:", error);
+      showToast("Failed to open spread deck");
+    }
+    return;
+  }
 
   // if card already active → clear it
   if (activeCard) {
@@ -1049,8 +1325,7 @@ if (!drawPile.length) {
       !held.some(h => cardsMatch(h, c))
     );
 
-    shuffle(rebuilt);
-    set(deckRef, rebuilt);
+    set(deckRef, arrangeDeck(rebuilt));
     showToast("Deck recycled");
   }, { onlyOnce: true });
 
@@ -1094,7 +1369,7 @@ if (!drawPile.length) {
     ${canControlActiveCard ? '<div class="close">✖</div>' : ''}
     ${deckHasSpecialCards && canControlActiveCard && !cardData.revealed ? '<div class="reveal" style="position:absolute; top:6px; left:8px; cursor:pointer;">👁</div>' : ''}
     <div style="font-weight:bold; margin-bottom:6px;">${cardData.top}</div>
-    ${cardData.img ? `<img src="${cardData.img}">` : ""}
+    ${getCardImageMarkup(cardData)}
     <div style="margin-top:6px;">${cardData.bottom}</div>
   `;
 
@@ -1195,7 +1470,9 @@ function addCardToHand(cardData, handKey) {
   discard.className = 'hand-action';
   discard.type = "button";
   discard.textContent = "✖";
-  discard.title = "Discard card until the deck recycles";
+  discard.title = deckMode === "spread"
+    ? "Return card the next time the spread opens"
+    : "Discard card until the deck recycles";
   discard.setAttribute('aria-label', `Discard ${cardData.top}`);
   mini.appendChild(discard);
 
@@ -1228,7 +1505,11 @@ function addCardToHand(cardData, handKey) {
     recycle.disabled = true;
     discard.disabled = true;
     try {
-      await removeHandCard(cardData, handKey);
+      if (deckMode === "spread") {
+        await discardSpreadHandCard(cardData, handKey);
+      } else {
+        await removeHandCard(cardData, handKey);
+      }
       showToast("Card discarded");
     } catch (error) {
       recycle.disabled = false;
@@ -1248,8 +1529,7 @@ async function recycleHandCard(cardData, handKey) {
     if (!deck.some(card => cardsMatch(card, baseCard))) {
       deck.push(baseCard);
     }
-    shuffle(deck);
-    return deck;
+    return arrangeDeck(deck);
   });
 
   if (!result.committed) {
@@ -1265,6 +1545,15 @@ function removeHandCard(cardData, handKey) {
     remove(ref(db, `rooms/${ROOM_ID}/revealed/${PLAYER_ID}_${cardData.id}`)),
     remove(ref(db, `rooms/${ROOM_ID}/tradeOffers/${PLAYER_ID}/${handKey}`))
   ]);
+}
+
+function discardSpreadHandCard(cardData, handKey) {
+  return update(roomRef, {
+    [`hands/${PLAYER_ID}/${handKey}`]: null,
+    [`revealed/${PLAYER_ID}_${cardData.id}`]: null,
+    [`tradeOffers/${PLAYER_ID}/${handKey}`]: null,
+    [`spreadDiscarded/${cardData.id}`]: getBaseCardData(cardData)
+  });
 }
 
 function setHandCardTradePending(card) {
@@ -1309,11 +1598,12 @@ function spawnPendingTradeCard(cardData, handKey, x, y) {
   const card = document.createElement('div');
   card.className = 'card hand-source-card';
   card.dataset.handKey = handKey;
+  card.dataset.cardId = cardData.id;
   card.dataset.tradePending = 'true';
   card.innerHTML = `
     <div class="close">✖</div>
     <div style="font-weight:bold; margin-bottom:6px;">${cardData.top}</div>
-    ${cardData.img ? `<img src="${cardData.img}">` : ""}
+    ${getCardImageMarkup(cardData)}
     <div style="margin-top:6px;">${cardData.bottom}</div>
   `;
   card.style.left = ((x ?? 0.4) * 100) + 'vw';
@@ -1329,10 +1619,17 @@ function spawnCardFromData(cardData, handKey) {
     showToast("Card is already revealed");
     return;
   }
+  const existingSourceCard = [...document.querySelectorAll('.hand-source-card')]
+    .find(card => Number(card.dataset.cardId) === cardData.id);
+  if (existingSourceCard) {
+    showToast("Card is already shown");
+    return;
+  }
 
   const card = document.createElement('div');
   card.className = 'card hand-source-card';
   card.dataset.handKey = handKey;
+  card.dataset.cardId = cardData.id;
   const isOffered = Boolean(tradeOffers[`${PLAYER_ID}/${handKey}`]);
   card.dataset.tradePending = String(isOffered);
 
@@ -1341,7 +1638,7 @@ function spawnCardFromData(cardData, handKey) {
   ${isOffered ? '' : '<div class="reveal" style="position:absolute; top:6px; left:8px; cursor:pointer;">👁</div>'}
   ${isOffered ? '' : '<div class="trade" style="position:absolute; top:6px; left:36px; cursor:pointer;">🤲</div>'}
   <div style="font-weight:bold; margin-bottom:6px;">${cardData.top}</div>
-  ${cardData.img ? `<img src="${cardData.img}">` : ""}
+  ${getCardImageMarkup(cardData)}
   <div style="margin-top:6px;">${cardData.bottom}</div>
 `;
 
@@ -1387,7 +1684,12 @@ function spawnCardFromData(cardData, handKey) {
       try {
         const revealRequest = revealCard(cardData, handKey, card);
         card.style.visibility = 'hidden';
-        await revealRequest;
+        const result = await revealRequest;
+        if (!result.committed) {
+          card.remove();
+          showToast("Card is already revealed");
+          return;
+        }
         reveal.remove();
         card.remove();
       } catch (error) {
@@ -1455,7 +1757,7 @@ function syncTradeOffer(offer, key) {
   const cardContent = offer.faceUp
     ? `
       <div style="font-weight:bold; margin-bottom:6px;">${offer.top}</div>
-      ${offer.img ? `<img src="${offer.img}">` : ""}
+      ${getCardImageMarkup(offer)}
       <div style="margin-top:6px;">${offer.bottom}</div>
     `
     : `<div>${deckName}</div>`;
@@ -1591,12 +1893,15 @@ function revealCard(cardData, handKey, card) {
     `rooms/${ROOM_ID}/revealed/${PLAYER_ID}_${cardData.id}`
   );
 
-  return set(sharedCardRef, {
-    ...cardData,
-    revealedBy: PLAYER_ID,
-    handKey,
-    x: rect.left / window.innerWidth,
-    y: rect.top / window.innerHeight
+  return runTransaction(sharedCardRef, currentCard => {
+    if (currentCard) return;
+    return {
+      ...cardData,
+      revealedBy: PLAYER_ID,
+      handKey,
+      x: rect.left / window.innerWidth,
+      y: rect.top / window.innerHeight
+    };
   });
 }
 
@@ -1620,7 +1925,7 @@ function syncRevealedCard(cardData, key) {
     ${isOwner ? '<div class="close" style="top:4px; right:6px;">✖</div>' : ''}
     ${isOwner && cardData.handKey ? '<div class="trade" style="position:absolute; top:6px; left:8px; cursor:pointer;">🤲</div>' : ''}
     <div style="font-weight:bold; margin-bottom:6px;">${cardData.top}</div>
-    ${cardData.img ? `<img src="${cardData.img}">` : ""}
+    ${getCardImageMarkup(cardData)}
     <div style="margin-top:6px;">${cardData.bottom}</div>
   `;
 
@@ -1817,10 +2122,109 @@ document.getElementById('remove-die').addEventListener('click', () => {
   }
 }
 
+function getDeckMode(name) {
+  const match = name.match(/\(mode:\s*([^)]+)\)/i);
+  if (!match) return "shuffle";
+
+  const mode = match[1].trim().toLowerCase();
+  if (mode !== "shuffle" && mode !== "ordered" && mode !== "spread") {
+    throw new Error(`Unsupported deck mode: ${mode}`);
+  }
+  return mode;
+}
+
+function arrangeDeck(cards) {
+  const arranged = [...cards];
+  if (deckMode === "ordered" || deckMode === "spread") {
+    return arranged.sort((first, second) => second.id - first.id);
+  }
+  shuffle(arranged);
+  return arranged;
+}
+
 function convertSheetUrlToCSV(url) {
   const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
   if (!match) return null;
   return `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv`;
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+
+  for (let index = 0; index < text.length; index++) {
+    const character = text[index];
+    if (character === '"') {
+      if (quoted && text[index + 1] === '"') {
+        cell += '"';
+        index++;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (character === ',' && !quoted) {
+      row.push(cell);
+      cell = "";
+    } else if ((character === '\n' || character === '\r') && !quoted) {
+      if (character === '\r' && text[index + 1] === '\n') index++;
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += character;
+    }
+  }
+
+  row.push(cell);
+  rows.push(row);
+  return rows;
+}
+
+function parseSpriteData(row, columns) {
+  const names = [
+    "SPRITE_COLUMN",
+    "SPRITE_ROW",
+    "SPRITE_COLUMNS",
+    "SPRITE_ROWS",
+    "SPRITE_SHEET_WIDTH",
+    "SPRITE_SHEET_HEIGHT"
+  ];
+  const indexes = names.map(name => columns.indexOf(name));
+  if (indexes.every(index => index === -1)) return null;
+  if (indexes.some(index => index === -1)) {
+    throw new Error("Sprite CSV is missing required sprite columns");
+  }
+
+  const values = indexes.map(index => Number(row[index]));
+  const [column, spriteRow, columnCount, rowCount, sheetWidth, sheetHeight] = values;
+  if (
+    !values.every(Number.isFinite) ||
+    !Number.isInteger(column) ||
+    !Number.isInteger(spriteRow) ||
+    !Number.isInteger(columnCount) ||
+    !Number.isInteger(rowCount) ||
+    column < 0 ||
+    spriteRow < 0 ||
+    columnCount < 1 ||
+    rowCount < 1 ||
+    column >= columnCount ||
+    spriteRow >= rowCount ||
+    sheetWidth <= 0 ||
+    sheetHeight <= 0
+  ) {
+    throw new Error("Sprite CSV contains invalid coordinates or dimensions");
+  }
+
+  return {
+    column,
+    row: spriteRow,
+    columns: columnCount,
+    rows: rowCount,
+    sheetWidth,
+    sheetHeight
+  };
 }
 
 async function loadDeckFromSheet(url) {
@@ -1847,24 +2251,32 @@ async function loadDeckFromSheet(url) {
     // ✅ DEBUG: show what we actually received
     console.log("FIRST 200 CHARS:", text.slice(0, 200));
 
-    const rows = text.split('\n').map(r => r.split(','));
+    const rows = parseCsv(text);
 
     const header = rows[0];
+    const columns = rows[1].map(column => column.trim().toUpperCase());
     deckName = header[0] || "Deck";
+    deckMode = getDeckMode(deckName);
 
     set(deckNameRef, deckName);
+    set(deckModeRef, deckMode);
 
-    deckCards = rows.slice(2).map((row, index) => ({
-      id: index,
-      top: row[0] || "",
-      bottom: row[1] || "",
-      img: row[2] || "",
-      special: (row[3] || "").trim().toLowerCase() === "true"
-    }));
+    deckCards = rows.slice(2)
+      .filter(row => row.some(cell => cell.trim() !== ""))
+      .map((row, index) => {
+        const sprite = parseSpriteData(row, columns);
+        return {
+          id: index,
+          top: row[0] || "",
+          bottom: row[1] || "",
+          img: row[2] || "",
+          special: (row[3] || "").trim().toLowerCase() === "true",
+          ...(sprite ? { sprite } : {})
+        };
+      });
 console.log("Parsed cards:", deckCards.slice(0, 5));
-    // initialize draw pile (shuffle)
-let newDeck = [...deckCards];
-shuffle(newDeck);
+    // initialize draw pile
+let newDeck = arrangeDeck(deckCards);
 
 // ✅ store deck globally
 
@@ -1874,6 +2286,8 @@ set(handsRef, null);
 set(activeCardRef, null);
 set(revealedRef, null);
 set(tradeOffersRef, null);
+set(spreadOpenRef, false);
+set(spreadDiscardedRef, null);
 set(deckLoadRef, `${Date.now()}_${PLAYER_ID}`);
 
     showToast(`Loaded ${deckCards.length} cards`);
@@ -1884,6 +2298,86 @@ set(deckLoadRef, `${Date.now()}_${PLAYER_ID}`);
     console.error(e);
     showToast("Failed to load deck");
   }
+}
+
+function escapeCsvCell(value) {
+  const text = String(value);
+  return /[",\r\n]/.test(text)
+    ? `"${text.replaceAll('"', '""')}"`
+    : text;
+}
+
+function loadSpriteImage(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve({
+      width: image.naturalWidth,
+      height: image.naturalHeight
+    });
+    image.onerror = () => reject(new Error("Could not load the sprite image"));
+    image.src = url;
+  });
+}
+
+async function createSpriteDeckCsv() {
+  const imageUrl = document.getElementById('sprite-url-input').value.trim();
+  const rawName = document.getElementById('sprite-name-input').value.trim();
+  const columns = Number(document.getElementById('sprite-columns-input').value);
+  const rows = Number(document.getElementById('sprite-rows-input').value);
+  const mode = document.getElementById('sprite-mode-input').value;
+
+  if (!imageUrl) throw new Error("Enter a public sprite image URL");
+  if (!Number.isInteger(columns) || columns < 1) {
+    throw new Error("Sprite columns must be a positive whole number");
+  }
+  if (!Number.isInteger(rows) || rows < 1) {
+    throw new Error("Sprite rows must be a positive whole number");
+  }
+
+  const dimensions = await loadSpriteImage(imageUrl);
+  const deckTitle = (rawName || "Sprite Deck")
+    .replace(/\(mode:\s*[^)]+\)/ig, "")
+    .trim();
+  const csvRows = [
+    [`${deckTitle} (mode:${mode})`, "", "", "", "", "", "", "", "", ""],
+    [
+      "TOP",
+      "BOTTOM",
+      "IMAGE",
+      "SPECIAL",
+      "SPRITE_COLUMN",
+      "SPRITE_ROW",
+      "SPRITE_COLUMNS",
+      "SPRITE_ROWS",
+      "SPRITE_SHEET_WIDTH",
+      "SPRITE_SHEET_HEIGHT"
+    ]
+  ];
+
+  for (let row = 0; row < rows; row++) {
+    for (let column = 0; column < columns; column++) {
+      const cardNumber = row * columns + column + 1;
+      csvRows.push([
+        `Card ${cardNumber}`,
+        "",
+        imageUrl,
+        "FALSE",
+        column,
+        row,
+        columns,
+        rows,
+        dimensions.width,
+        dimensions.height
+      ]);
+    }
+  }
+
+  return {
+    csv: csvRows
+      .map(csvRow => csvRow.map(escapeCsvCell).join(","))
+      .join("\r\n"),
+    fileName: `${deckTitle.replace(/[^a-z0-9_-]+/gi, "-") || "sprite-deck"}.csv`
+  };
 }
   
 // ─────────────────────────────────────────────
@@ -1986,6 +2480,36 @@ document.getElementById('load-deck-btn').addEventListener('click', () => {
   loadDeckFromSheet(url);
 });
 
+document.getElementById('create-sprite-deck-btn').addEventListener('click', async () => {
+  try {
+    const { csv } = await createSpriteDeckCsv();
+    await loadDeckFromSheet(
+      `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`
+    );
+  } catch (error) {
+    console.error("Failed to create sprite deck:", error);
+    showToast(error.message || "Failed to create sprite deck", 4000);
+  }
+});
+
+document.getElementById('download-sprite-csv-btn').addEventListener('click', async () => {
+  try {
+    const { csv, fileName } = await createSpriteDeckCsv();
+    const downloadUrl = URL.createObjectURL(
+      new Blob([csv], { type: "text/csv;charset=utf-8" })
+    );
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(downloadUrl);
+    showToast("Sprite deck CSV downloaded");
+  } catch (error) {
+    console.error("Failed to download sprite deck CSV:", error);
+    showToast(error.message || "Failed to download sprite deck CSV", 4000);
+  }
+});
+
   
 </script>
 
@@ -2023,6 +2547,40 @@ document.getElementById('load-deck-btn').addEventListener('click', () => {
 <button class="panel-btn" id="load-deck-btn" style="margin-top:4px">
   🃏 Load Deck
 </button>
+
+  <h2 style="margin-top:4px">Sprite Deck Tool</h2>
+  <input id="sprite-url-input" type="url"
+    placeholder="Public sprite sheet image URL"
+    style="width:100%;background:rgba(255,255,255,0.07);
+    border:1px solid rgba(212,160,23,0.3);border-radius:6px;color:var(--cream);
+    font-family:'Cinzel',serif;font-size:10px;padding:8px 10px;outline:none;box-sizing:border-box;" />
+  <input id="sprite-name-input" type="text" value="Sprite Deck"
+    aria-label="Sprite deck name"
+    style="width:100%;background:rgba(255,255,255,0.07);
+    border:1px solid rgba(212,160,23,0.3);border-radius:6px;color:var(--cream);
+    font-family:'Cinzel',serif;font-size:10px;padding:8px 10px;outline:none;box-sizing:border-box;" />
+  <div style="display:flex;gap:6px;">
+    <input id="sprite-columns-input" type="number" min="1" value="13"
+      aria-label="Sprite columns"
+      style="width:50%;background:rgba(255,255,255,0.07);
+      border:1px solid rgba(212,160,23,0.3);border-radius:6px;color:var(--cream);
+      font-family:'Cinzel',serif;font-size:10px;padding:8px;outline:none;box-sizing:border-box;" />
+    <input id="sprite-rows-input" type="number" min="1" value="4"
+      aria-label="Sprite rows"
+      style="width:50%;background:rgba(255,255,255,0.07);
+      border:1px solid rgba(212,160,23,0.3);border-radius:6px;color:var(--cream);
+      font-family:'Cinzel',serif;font-size:10px;padding:8px;outline:none;box-sizing:border-box;" />
+  </div>
+  <select id="sprite-mode-input" aria-label="Sprite deck mode"
+    style="width:100%;background:#281608;border:1px solid rgba(212,160,23,0.3);
+    border-radius:6px;color:var(--cream);font-family:'Cinzel',serif;font-size:10px;
+    padding:8px;outline:none;box-sizing:border-box;">
+    <option value="shuffle" selected>Shuffle</option>
+    <option value="ordered">Ordered</option>
+    <option value="spread">Spread</option>
+  </select>
+  <button class="panel-btn" id="create-sprite-deck-btn">🂠 Create Sprite Deck</button>
+  <button class="panel-btn" id="download-sprite-csv-btn">⬇ Download Editable CSV</button>
 
   <h2 style="margin-top:4px">Add Piece</h2>
   <div id="add-piece-colors"></div>
